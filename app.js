@@ -1,12 +1,12 @@
 const express = require("express");
 const mysql = require("mysql");
+const axios = require('axios');
 const cors = require("cors");
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT;
 
-// Configuración de la conexión a la base de datos
 const connection = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -14,7 +14,6 @@ const connection = mysql.createConnection({
   database: "login",
 });
 
-// Conexión a la base de datos
 connection.connect((err) => {
   if (err) {
     console.error("Error al conectar a la base de datos: ", err);
@@ -23,15 +22,12 @@ connection.connect((err) => {
   }
 });
 
-// Middleware para habilitar CORS
 app.use(cors());
 app.use(express.json());
 
-// Ruta para validar el usuario y contraseña
 app.post("/login", (req, res) => {
   const { usuario, password } = req.body;
   const query = "SELECT * FROM usuarios WHERE usuario = ? AND contrasenia = ?";
-  // Llamar al procedimiento almacenado
   connection.query(query, [usuario, password], (err, results) => {
     if (err) {
       console.error("Error al ejecutar la consulta:", err);
@@ -53,6 +49,43 @@ app.post("/login", (req, res) => {
       });
     }
   });
+});
+
+
+app.post('/logs', (req, res) => {
+  const { usuario, accion } = req.body;
+  const query = 'INSERT INTO logs (usuario, accion) VALUES (?, ?)';
+  const values = [usuario, accion];
+
+  connection.query(query, values, (err, results) => {
+    if (err) {
+      console.error('Error al ejecutar la consulta:', err);
+      res.status(500).json({ 
+        ok: false,
+        error: 'Ocurrió un error al agregar el registro' });
+      return;
+    }
+
+    res.json({ 
+      ok: true,
+      message: 'Registro agregado correctamente' });
+  });
+});
+let data;
+
+app.get('/personajes', async(req, res) => {
+
+  axios.get('https://rickandmortyapi.com/api/character')
+    .then(response => {
+      res.json({
+        ok: true,
+        data: response.data.results});
+      return;
+    })
+    .catch(error => {
+      console.error('Error al obtener las películas populares:', error);
+      res.status(500).json({ error: 'Ocurrió un error al obtener las películas populares' });
+    });
 });
 
 // Iniciar el servidor
